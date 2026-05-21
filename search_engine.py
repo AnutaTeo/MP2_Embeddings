@@ -6,11 +6,47 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 from sklearn.metrics.pairwise import cosine_similarity
+import cv2
+
+from gradcam_utils import generate_gradcam
 
 # Configuration
 EMBEDDINGS_PATH = "embeddings/embeddings.npy"
 IMAGE_PATHS_PATH = "embeddings/image_paths.npy"
 LABELS_PATH = "embeddings/labels.npy"
+
+
+class UltraLightCNN(nn.Module):
+    def __init__(self):
+        super(UltraLightCNN, self).__init__()
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 16, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2), # Output: 112x112
+            
+            nn.Conv2d(16, 32, kernel_size=3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2)  # Output: 56x56
+        )
+        # Adaptare pentru input de 224x224 (32 canale * 56 * 56)
+        self.classifier = nn.Linear(32 * 56 * 56, 2)
+
+    def forward(self, x):
+        x = self.features(x)
+        x = x.view(x.size(0), -1)
+        x = self.classifier(x)
+        return x
+
+def get_image_transform():
+    # Modificare de la 128x128 la 224x224
+    return transforms.Compose([
+        transforms.Resize((224, 224)), 
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],
+            std=[0.229, 0.224, 0.225]
+        )
+    ])
 
 # Model loading
 def get_device():
@@ -21,7 +57,6 @@ def get_device():
 
 def load_feature_extractor(device):
     print("Loading pretrained DenseNet121 model...")
-
     weights = models.DenseNet121_Weights.DEFAULT
     model = models.densenet121(weights=weights)
 
@@ -37,9 +72,9 @@ def load_feature_extractor(device):
 
 
 def get_image_transform():
-    #Transform image to the format expected
+    # ATENȚIE: Dacă în scriptul rapid ai folosit rezoluție 128, schimbă și aici la (128, 128)
     return transforms.Compose([
-        transforms.Resize((224, 224)),
+        transforms.Resize((128, 128)), 
         transforms.ToTensor(),
         transforms.Normalize(
             mean=[0.485, 0.456, 0.406],
@@ -67,28 +102,44 @@ def extract_embedding(image_path, model, transform, device):
 # Search engine class
 class XRaySearchEngine:
     def __init__(self):
+
         if not os.path.exists(EMBEDDINGS_PATH):
-            raise FileNotFoundError("embeddings.npy not found. Run extract_embeddings.py first.")
+            raise FileNotFoundError("embeddings.npy not found.")
 
         if not os.path.exists(IMAGE_PATHS_PATH):
-            raise FileNotFoundError("image_paths.npy not found. Run extract_embeddings.py first.")
+            raise FileNotFoundError("image_paths.npy not found.")
 
         if not os.path.exists(LABELS_PATH):
-            raise FileNotFoundError("labels.npy not found. Run extract_embeddings.py first.")
+            raise FileNotFoundError("labels.npy not found.")
 
         self.embeddings = np.load(EMBEDDINGS_PATH)
         self.image_paths = np.load(IMAGE_PATHS_PATH)
         self.labels = np.load(LABELS_PATH)
 
         self.device = get_device()
+
         self.model = load_feature_extractor(self.device)
+
         self.transform = get_image_transform()
+
+        print("Loading UltraLightCNN classifier...")
+        self.classifier = UltraLightCNN()
+
+        self.classifier.load_state_dict(
+            torch.load(
+                "classifier_model.pth",
+                map_location=self.device
+            )
+        )
+
+        self.classifier.to(self.device)
+        self.classifier.eval()
 
         print("Search engine loaded.")
         print("Embeddings shape:", self.embeddings.shape)
         print("Device:", self.device)
 
-    def search_similar_images(self, query_image_path, top_k=5):
+    def search_similar_images(self, query_image_path, top_k=5, similarity_threshold=0.60):
         query_embedding = extract_embedding(
             query_image_path,
             self.model,
@@ -110,10 +161,21 @@ class XRaySearchEngine:
                 "similarity": float(similarities[index])
             })
 
+
         prediction = self.predict_from_neighbors(results)
+ 
+        heatmap, predicted_class = generate_gradcam(
+            self.classifier,
+            query_image_path,
+            self.device
+        )
+
+        heatmap_path = "gradcam_result.jpg"
+        cv2.imwrite(heatmap_path, heatmap)
+        
         explanation = self.create_explanation(results, prediction)
 
-        return results, prediction, explanation, query_embedding.flatten()
+        return (results, prediction, explanation, query_embedding.flatten(), heatmap_path)
 
     def predict_from_neighbors(self, results):
         normal_count = sum(1 for r in results if r["label"] == "NORMAL")

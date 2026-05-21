@@ -3,183 +3,399 @@
 <head>
     <meta charset="UTF-8">
     <title>MedVision - Results</title>
+
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 
 <body>
+
     <div class="page">
+
         <header class="top-bar">
+
             <div>
                 <p class="badge">Analysis Result</p>
                 <h1>MedVision Results</h1>
             </div>
 
-            <a class="back-link" href="/">Analyze another image</a>
+            <a class="back-link" href="/">
+                Analyze another image
+            </a>
+
         </header>
 
+        <!-- ========================================= -->
+        <!-- PREDICTION SUMMARY -->
+        <!-- ========================================= -->
+
         <section class="result-summary">
+
             <div class="prediction-card
+
                 {% if prediction.predicted_class == 'NORMAL' %}
                     prediction-normal
+
                 {% elif prediction.predicted_class == 'PNEUMONIA' %}
                     prediction-pneumonia
+
                 {% else %}
                     prediction-uncertain
+
                 {% endif %}
             ">
-                <p class="small-title">Estimated Class</p>
-                <h2>{{ prediction.predicted_class }}</h2>
-                <p>Confidence: {{ "%.0f"|format(prediction.confidence * 100) }}%</p>
+
+                <p class="small-title">
+                    Estimated Class
+                </p>
+
+                <h2>
+                    {{ prediction.predicted_class }}
+                </h2>
+
+                <p>
+                    Confidence:
+                    {{ "%.0f"|format(prediction.confidence * 100) }}%
+                </p>
+
             </div>
 
             <div class="explanation-card">
+
                 <h3>Why this result?</h3>
-                <p>{{ explanation.text }}</p>
+
+                <p>
+                    {{ explanation.text }}
+                </p>
 
                 <div class="mini-stats">
+
                     <div>
                         <span>NORMAL neighbors</span>
-                        <strong>{{ prediction.normal_count }}</strong>
+
+                        <strong>
+                            {{ prediction.normal_count }}
+                        </strong>
                     </div>
 
                     <div>
                         <span>PNEUMONIA neighbors</span>
-                        <strong>{{ prediction.pneumonia_count }}</strong>
+
+                        <strong>
+                            {{ prediction.pneumonia_count }}
+                        </strong>
                     </div>
 
                     <div>
                         <span>Avg NORMAL similarity</span>
-                        <strong>{{ "%.3f"|format(explanation.avg_normal_similarity) }}</strong>
+
+                        <strong>
+                            {{ "%.3f"|format(explanation.avg_normal_similarity) }}
+                        </strong>
                     </div>
 
                     <div>
                         <span>Avg PNEUMONIA similarity</span>
-                        <strong>{{ "%.3f"|format(explanation.avg_pneumonia_similarity) }}</strong>
+
+                        <strong>
+                            {{ "%.3f"|format(explanation.avg_pneumonia_similarity) }}
+                        </strong>
                     </div>
+
                 </div>
             </div>
         </section>
 
+        <!-- ========================================= -->
+        <!-- PIPELINE -->
+        <!-- ========================================= -->
+
         <section class="card">
+
             <h2>Visual Pipeline</h2>
 
             <div class="pipeline">
+
                 {% for step in process_steps %}
+
                     <div class="pipeline-step">
-                        <h3>{{ step.title }}</h3>
-                        <p>{{ step.description }}</p>
+
+                        <h3>
+                            {{ step.title }}
+                        </h3>
+
+                        <p>
+                            {{ step.description }}
+                        </p>
+
                     </div>
+
                 {% endfor %}
+
             </div>
         </section>
+
+        <!-- ========================================= -->
+        <!-- IMAGE COMPARISON -->
+        <!-- ========================================= -->
 
         <section class="comparison-section">
+
             <div class="image-panel">
+
                 <h2>Uploaded Image</h2>
-                <img src="{{ uploaded_image }}" alt="Uploaded X-ray">
+
+                <img
+                    src="{{ uploaded_image }}"
+                    alt="Uploaded X-ray"
+                >
+
             </div>
 
             <div class="image-panel">
+
                 <h2>Preprocessed Preview</h2>
-                <img src="{{ processed_image }}" alt="Preprocessed X-ray">
+
+                <img
+                    src="{{ processed_image }}"
+                    alt="Preprocessed X-ray"
+                >
+
                 <p class="caption">
-                    Preview of resize and contrast preparation. The model also applies tensor conversion and normalization.
+                    Preview of resize and contrast preparation.
+                    The model also applies tensor conversion
+                    and normalization.
                 </p>
+
             </div>
+
         </section>
 
+        <!-- ========================================= -->
+        <!-- GRAD-CAM -->
+        <!-- ========================================= -->
+
         <section class="card">
-            <h2>Embedding Preview</h2>
+
+            <h2>Grad-CAM Explainability</h2>
+
             <p>
-                The CNN converted the uploaded X-ray into an embedding vector with
-                <strong>{{ embedding_size }}</strong> numerical values.
+                The heatmap highlights the regions
+                that most influenced the AI prediction.
+                Warmer colors indicate areas with
+                stronger contribution to the model output.
+            </p>
+
+            <div class="comparison-section">
+
+                <div class="image-panel">
+
+                    <h2>Original X-ray</h2>
+
+                    <img
+                        src="{{ uploaded_image }}"
+                        alt="Original X-ray"
+                    >
+
+                </div>
+
+                <div class="image-panel">
+
+                    <h2>Grad-CAM Heatmap</h2>
+
+                    <img
+                        src="{{ gradcam_image }}"
+                        alt="Grad-CAM Heatmap"
+                    >
+
+                    <p class="caption">
+                        Highlighted areas represent
+                        image regions that strongly
+                        influenced the prediction.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <!-- ========================================= -->
+        <!-- EMBEDDINGS -->
+        <!-- ========================================= -->
+
+        <section class="card">
+
+            <h2>Embedding Preview</h2>
+
+            <p>
+                The CNN converted the uploaded X-ray
+                into an embedding vector with
+
+                <strong>
+                    {{ embedding_size }}
+                </strong>
+
+                numerical values.
             </p>
 
             <div class="embedding-box">
+
                 {% for value in embedding_preview %}
-                    <span>{{ value }}</span>
+
+                    <span>
+                        {{ value }}
+                    </span>
+
                 {% endfor %}
+
                 <span>...</span>
+
             </div>
+
         </section>
 
+        <!-- ========================================= -->
+        <!-- SIMILAR XRAYS -->
+        <!-- ========================================= -->
+
         <section class="card">
+
             <h2>Most Similar X-rays</h2>
+
             <p>
-                These are the closest images found in the dataset using cosine similarity.
+                These are the closest images found
+                in the dataset using cosine similarity.
             </p>
 
             <div class="results-grid">
+
                 {% for result in results %}
+
                     <div class="result-card">
-                        <img src="{{ result.image_url }}" alt="Similar X-ray">
+
+                        <img
+                            src="{{ result.image_url }}"
+                            alt="Similar X-ray"
+                        >
 
                         <div class="result-info">
-                            <p class="rank">Top {{ result.rank }}</p>
+
+                            <p class="rank">
+                                Top {{ result.rank }}
+                            </p>
 
                             <h3 class="
+
                                 {% if result.label == 'NORMAL' %}
                                     label-normal
+
                                 {% elif result.label == 'PNEUMONIA' %}
                                     label-pneumonia
+
                                 {% else %}
                                     label-uncertain
+
                                 {% endif %}
                             ">
+
                                 {{ result.label }}
+
                             </h3>
 
-                            <p>Similarity: {{ result.similarity }}</p>
+                            <p>
+                                Similarity:
+                                {{ result.similarity }}
+                            </p>
+
                         </div>
                     </div>
+
                 {% endfor %}
+
             </div>
+
         </section>
 
+        <!-- ========================================= -->
+        <!-- CLASS DISTRIBUTION -->
+        <!-- ========================================= -->
+
         <section class="card">
-            <h2>Class Distribution in Nearest Neighbors</h2>
+
+            <h2>
+                Class Distribution in Nearest Neighbors
+            </h2>
 
             <div class="bar-chart">
+
                 <div class="bar-row">
+
                     <span>NORMAL</span>
 
                     <div class="bar-bg">
+
                         <div
                             class="bar normal-bar dynamic-bar"
                             data-percentage="{{ normal_percentage }}">
                         </div>
+
                     </div>
 
-                    <strong>{{ prediction.normal_count }}</strong>
+                    <strong>
+                        {{ prediction.normal_count }}
+                    </strong>
+
                 </div>
 
                 <div class="bar-row">
+
                     <span>PNEUMONIA</span>
 
                     <div class="bar-bg">
+
                         <div
                             class="bar pneumonia-bar dynamic-bar"
                             data-percentage="{{ pneumonia_percentage }}">
                         </div>
+
                     </div>
 
-                    <strong>{{ prediction.pneumonia_count }}</strong>
+                    <strong>
+                        {{ prediction.pneumonia_count }}
+                    </strong>
+
                 </div>
+
             </div>
 
             <p class="caption">
-                Percentages are calculated from the top {{ total_neighbors }} nearest images.
+
+                Percentages are calculated from the
+                top {{ total_neighbors }}
+                nearest images.
+
             </p>
+
         </section>
+
     </div>
 
     <script>
-        const bars = document.querySelectorAll(".dynamic-bar");
+
+        const bars = document.querySelectorAll(
+            ".dynamic-bar"
+        );
 
         bars.forEach(function(bar) {
-            const percentage = bar.dataset.percentage;
-            bar.style.width = percentage + "%";
+
+            const percentage =
+                bar.dataset.percentage;
+
+            bar.style.width =
+                percentage + "%";
         });
+
     </script>
+
 </body>
 </html>
