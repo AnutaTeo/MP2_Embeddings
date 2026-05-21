@@ -2,11 +2,15 @@ import os
 import shutil
 from uuid import uuid4
 
+import cv2
+
 from flask import Flask, render_template, request, url_for
 from PIL import Image, ImageOps
 
 from search_engine import XRaySearchEngine
 from visualize_embeddings import generate_all_visualizations
+
+from gradcam_utils import generate_gradcam
 
 
 app = Flask(__name__)
@@ -14,12 +18,14 @@ app = Flask(__name__)
 UPLOAD_FOLDER = "static/uploads"
 RESULTS_FOLDER = "static/results"
 PROCESSED_FOLDER = "static/processed"
+GRADCAM_FOLDER = "static/gradcam"
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg"}
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(RESULTS_FOLDER, exist_ok=True)
 os.makedirs(PROCESSED_FOLDER, exist_ok=True)
+os.makedirs(GRADCAM_FOLDER, exist_ok=True)
 
 search_engine = XRaySearchEngine()
 
@@ -42,7 +48,8 @@ def save_preprocessed_preview(image_path, output_path):
 
 def copy_result_image(original_path, result_index):
     """
-    Copies dataset result images into static/results so Flask can display them in the browser.
+    Copies dataset result images into static/results
+    so Flask can display them in the browser.
     """
 
     extension = os.path.splitext(original_path)[1]
@@ -51,7 +58,11 @@ def copy_result_image(original_path, result_index):
         extension = ".jpg"
 
     new_filename = f"result_{result_index}_{uuid4().hex}{extension}"
-    destination = os.path.join(RESULTS_FOLDER, new_filename)
+
+    destination = os.path.join(
+        RESULTS_FOLDER,
+        new_filename
+    )
 
     shutil.copy(original_path, destination)
 
@@ -65,13 +76,20 @@ def index():
 
 @app.route("/analyze", methods=["POST"])
 def analyze():
+
     if "xray_image" not in request.files:
-        return render_template("index.html", error="No file uploaded.")
+        return render_template(
+            "index.html",
+            error="No file uploaded."
+        )
 
     file = request.files["xray_image"]
 
     if file.filename == "":
-        return render_template("index.html", error="No selected file.")
+        return render_template(
+            "index.html",
+            error="No selected file."
+        )
 
     if not allowed_file(file.filename):
         return render_template(
@@ -79,97 +97,259 @@ def analyze():
             error="Only PNG, JPG, and JPEG files are allowed."
         )
 
+    # -----------------------------------------
+    # SAVE UPLOADED IMAGE
+    # -----------------------------------------
+
     unique_name = f"{uuid4().hex}_{file.filename}"
-    upload_path = os.path.join(UPLOAD_FOLDER, unique_name)
+
+    upload_path = os.path.join(
+        UPLOAD_FOLDER,
+        unique_name
+    )
+
     file.save(upload_path)
 
+    # -----------------------------------------
+    # PREPROCESSING PREVIEW
+    # -----------------------------------------
+
     processed_name = f"processed_{unique_name}"
-    processed_path = os.path.join(PROCESSED_FOLDER, processed_name)
-    save_preprocessed_preview(upload_path, processed_path)
 
-    top_k = int(request.form.get("top_k", 5))
-
-    results, prediction, explanation, query_embedding = search_engine.search_similar_images(
-        query_image_path=upload_path,
-        top_k=top_k
+    processed_path = os.path.join(
+        PROCESSED_FOLDER,
+        processed_name
     )
+
+    save_preprocessed_preview(
+        upload_path,
+        processed_path
+    )
+
+    # -----------------------------------------
+    # SEARCH ENGINE
+    # -----------------------------------------
+
+    top_k = int(
+        request.form.get("top_k", 5)
+    )
+
+    results, prediction, explanation, query_embedding, _ = search_engine.search_similar_images(
+        upload_path, 
+        top_k=top_k 
+    )
+
+    # -----------------------------------------
+    # GRAD-CAM GENERATION
+    # -----------------------------------------
+
+    heatmap, predicted_class = generate_gradcam(
+        search_engine.classifier,
+        upload_path,
+        search_engine.device
+    )
+
+    gradcam_filename = (
+        f"gradcam_{uuid4().hex}.jpg"
+    )
+
+    gradcam_path = os.path.join(
+        GRADCAM_FOLDER,
+        gradcam_filename
+    )
+
+    cv2.imwrite(
+        gradcam_path,
+        cv2.cvtColor(
+            heatmap,
+            cv2.COLOR_RGB2BGR
+        )
+    )
+
+    gradcam_url = url_for(
+        "static",
+        filename=f"gradcam/{gradcam_filename}"
+    )
+
+    # -----------------------------------------
+    # COPY SEARCH RESULTS
+    # -----------------------------------------
 
     browser_results = []
 
     for index, result in enumerate(results, start=1):
-        static_result_path = copy_result_image(result["image_path"], index)
+
+        static_result_path = copy_result_image(
+            result["image_path"],
+            index
+        )
 
         browser_results.append({
             "rank": index,
-            "image_url": url_for("static", filename=static_result_path),
+            "image_url": url_for(
+                "static",
+                filename=static_result_path
+            ),
             "label": result["label"],
-            "similarity": round(result["similarity"], 4),
+            "similarity": round(
+                result["similarity"],
+                4
+            ),
             "original_path": result["image_path"]
         })
 
-    embedding_preview = query_embedding[:12].round(4).tolist()
+    # -----------------------------------------
+    # EMBEDDING PREVIEW
+    # -----------------------------------------
 
-    total_neighbors = prediction["normal_count"] + prediction["pneumonia_count"]
+    embedding_preview = (
+        query_embedding[:12]
+        .round(4)
+        .tolist()
+    )
+
+    # -----------------------------------------
+    # PERCENTAGES
+    # -----------------------------------------
+
+    total_neighbors = (
+        prediction["normal_count"]
+        + prediction["pneumonia_count"]
+    )
 
     if total_neighbors > 0:
+
         normal_percentage = round(
-            (prediction["normal_count"] / total_neighbors) * 100,
+            (
+                prediction["normal_count"]
+                / total_neighbors
+            ) * 100,
             2
         )
+
         pneumonia_percentage = round(
-            (prediction["pneumonia_count"] / total_neighbors) * 100,
+            (
+                prediction["pneumonia_count"]
+                / total_neighbors
+            ) * 100,
             2
         )
+
     else:
         normal_percentage = 0
         pneumonia_percentage = 0
 
+    # -----------------------------------------
+    # ANALYSIS PIPELINE STEPS
+    # -----------------------------------------
+
     process_steps = [
+
         {
             "title": "1. Image Upload",
-            "description": "The user uploads a chest X-ray image from the computer."
+            "description": (
+                "The user uploads a chest X-ray "
+                "image from the computer."
+            )
         },
+
         {
             "title": "2. Preprocessing",
-            "description": "The image is converted to RGB, resized to 224x224, transformed into a tensor and normalized."
+            "description": (
+                "The image is converted to RGB, "
+                "resized to 224x224, transformed "
+                "into a tensor and normalized."
+            )
         },
+
         {
             "title": "3. CNN Feature Extraction",
-            "description": "DenseNet121 removes the classification layer and outputs a numerical image embedding."
+            "description": (
+                "DenseNet121 extracts deep "
+                "visual features from the X-ray."
+            )
         },
+
         {
-            "title": "4. Similarity Search",
-            "description": "The uploaded image embedding is compared with all stored dataset embeddings using cosine similarity."
+            "title": "4. Grad-CAM Explainability",
+            "description": (
+                "Grad-CAM computes activation "
+                "maps showing which image regions "
+                "most influenced the prediction."
+            )
         },
+
         {
-            "title": "5. Neighbor Voting",
-            "description": "The final estimation is based on the labels of the most similar images."
+            "title": "5. Similarity Search",
+            "description": (
+                "The uploaded image embedding is "
+                "compared with all stored dataset "
+                "embeddings using cosine similarity."
+            )
+        },
+
+        {
+            "title": "6. Neighbor Voting",
+            "description": (
+                "The final estimation is based "
+                "on the labels of the most "
+                "similar images."
+            )
         }
     ]
 
+    # -----------------------------------------
+    # RENDER RESULTS
+    # -----------------------------------------
+
     return render_template(
+
         "results.html",
-        uploaded_image=url_for("static", filename=f"uploads/{unique_name}"),
-        processed_image=url_for("static", filename=f"processed/{processed_name}"),
+
+        uploaded_image=url_for(
+            "static",
+            filename=f"uploads/{unique_name}"
+        ),
+
+        processed_image=url_for(
+            "static",
+            filename=f"processed/{processed_name}"
+        ),
+
+        gradcam_image=gradcam_url,
+
         results=browser_results,
+
         prediction=prediction,
+
         explanation=explanation,
+
         embedding_preview=embedding_preview,
+
         embedding_size=len(query_embedding),
+
         process_steps=process_steps,
+
         normal_percentage=normal_percentage,
+
         pneumonia_percentage=pneumonia_percentage,
+
         total_neighbors=total_neighbors
     )
 
+
 @app.route("/visualizations")
 def visualizations():
-    visualization_data = generate_all_visualizations()
+
+    visualization_data = (
+        generate_all_visualizations()
+    )
 
     return render_template(
         "visualizations.html",
         visualization_data=visualization_data
     )
+
 
 if __name__ == "__main__":
     app.run(debug=True)

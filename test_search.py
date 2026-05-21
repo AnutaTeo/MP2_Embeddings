@@ -7,14 +7,17 @@ from search_engine import XRaySearchEngine
 def show_results(query_image_path, results, prediction, explanation):
     top_k = len(results)
 
-    fig, axes = plt.subplots(1, top_k + 1, figsize=(18, 4))
+    fig, axes = plt.subplots(1, top_k + 2, figsize=(22, 4))
 
     query_image = Image.open(query_image_path)
     axes[0].imshow(query_image, cmap="gray")
     axes[0].set_title("Query Image")
     axes[0].axis("off")
+    axes[1].imshow(heatmap)
+    axes[1].set_title("Grad-CAM")
+    axes[1].axis("off")
 
-    for position, result in enumerate(results, start=1):
+    for position, result in enumerate(results, start=2):
         image = Image.open(result["image_path"])
 
         axes[position].imshow(image, cmap="gray")
@@ -70,7 +73,7 @@ def main():
             result["image_path"]
         )
 
-    show_results(query_image_path, results, prediction, explanation)
+    show_results(results, prediction, explanation, query_embedding, heatmap_path)
 
 
 if __name__ == "__main__":
