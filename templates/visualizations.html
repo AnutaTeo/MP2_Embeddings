@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MedVision - Embedding Visualizations</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <div class="page">
+        <header class="top-bar">
+            <div>
+                <p class="badge">Embedding Space Visualization</p>
+                <h1>X-ray Embeddings with PCA</h1>
+            </div>
+
+            <a class="back-link" href="/">Back to Home</a>
+        </header>
+
+        <section class="card">
+            <h2>What are we visualizing?</h2>
+
+            <p>
+                The CNN converts every X-ray image into an embedding vector.
+                In this project, each image embedding has
+                <strong>{{ visualization_data.embedding_size }}</strong> numerical values.
+            </p>
+
+            <p>
+                Since humans cannot directly see a high-dimensional vector space,
+                we use PCA to reduce the embeddings to 2D and 3D visual representations.
+            </p>
+
+            <div class="mini-stats">
+                <div>
+                    <span>Total images</span>
+                    <strong>{{ visualization_data.total_images }}</strong>
+                </div>
+
+                <div>
+                    <span>Embedding size</span>
+                    <strong>{{ visualization_data.embedding_size }}</strong>
+                </div>
+
+                <div>
+                    <span>NORMAL images</span>
+                    <strong>{{ visualization_data.normal_count }}</strong>
+                </div>
+
+                <div>
+                    <span>PNEUMONIA images</span>
+                    <strong>{{ visualization_data.pneumonia_count }}</strong>
+                </div>
+            </div>
+        </section>
+
+        <section class="card visualization-card">
+            <h2>2D PCA Visualization</h2>
+
+            <p>
+                Each point represents one X-ray image. Points that are close together have similar CNN embeddings.
+                This plot reduces the original high-dimensional embeddings to two principal components.
+            </p>
+
+            <img src="/static/visualizations/pca_2d.png" alt="2D PCA visualization">
+        </section>
+
+        <section class="card visualization-card">
+            <h2>Interactive 3D PCA Visualization</h2>
+
+            <p>
+                This plot uses three PCA components as X, Y, and Z coordinates.
+                You can rotate, zoom, pan, and hover over the points.
+            </p>
+
+            <iframe
+                class="plot-frame"
+                src="/static/visualizations/pca_3d_interactive.html">
+            </iframe>
+        </section>
+
+        <section class="card">
+            <h2>How to explain this in the presentation</h2>
+
+            <p>
+                The original CNN embeddings are high-dimensional vectors and cannot be visualized directly.
+                PCA reduces these vectors to fewer dimensions while preserving the most important variation.
+                The 2D and 3D plots help us understand how NORMAL and PNEUMONIA radiographs are distributed
+                in the embedding space.
+            </p>
+        </section>
+
+    </div>
+</body>
+</html>

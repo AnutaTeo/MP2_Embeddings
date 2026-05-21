@@ -4,7 +4,7 @@ from PIL import Image
 from search_engine import XRaySearchEngine
 
 
-def show_results(query_image_path, results, prediction):
+def show_results(query_image_path, results, prediction, explanation):
     top_k = len(results)
 
     fig, axes = plt.subplots(1, top_k + 1, figsize=(18, 4))
@@ -29,7 +29,9 @@ def show_results(query_image_path, results, prediction):
         f"Prediction: {prediction['predicted_class']} | "
         f"Confidence: {prediction['confidence']:.2f} | "
         f"Normal: {prediction['normal_count']} | "
-        f"Pneumonia: {prediction['pneumonia_count']}"
+        f"Pneumonia: {prediction['pneumonia_count']}\n"
+        f"Avg NORMAL sim: {explanation['avg_normal_similarity']:.3f} | "
+        f"Avg PNEUMONIA sim: {explanation['avg_pneumonia_similarity']:.3f}"
     )
 
     plt.tight_layout()
@@ -39,26 +41,36 @@ def show_results(query_image_path, results, prediction):
 def main():
     search_engine = XRaySearchEngine()
 
+    # Change this to your real image path
     query_image_path = r"C:\Users\User\Desktop\Prezentari\MP2_Embeddings\image3_n.jpeg"
 
-    results, prediction = search_engine.search_similar_images(
+    results, prediction, explanation, query_embedding = search_engine.search_similar_images(
         query_image_path=query_image_path,
-        top_k=10
+        top_k=5
     )
 
     print("\nPrediction:")
     print(prediction)
+
+    print("\nExplanation:")
+    print(explanation)
+
+    print("\nQuery embedding size:")
+    print(len(query_embedding))
+
+    print("\nFirst 10 embedding values:")
+    print(query_embedding[:10])
 
     print("\nTop similar images:")
     for index, result in enumerate(results, start=1):
         print(
             index,
             result["label"],
-            result["similarity"],
+            round(result["similarity"], 4),
             result["image_path"]
         )
 
-    show_results(query_image_path, results, prediction)
+    show_results(query_image_path, results, prediction, explanation)
 
 
 if __name__ == "__main__":

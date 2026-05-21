@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MedVision - X-ray Similarity Search</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+    <div class="page">
+        <header class="hero">
+            <div>
+                <p class="badge">CNN Image Embeddings Project</p>
+                <h1>MedVision</h1>
+                <h2>Chest X-ray Similarity Search</h2>
+                <p>
+                    Upload a chest X-ray image and the system will search for visually similar
+                    radiographs using CNN image embeddings and cosine similarity.
+                </p>
+            </div>
+        </header>
+
+        {% if error %}
+            <div class="error-box">{{ error }}</div>
+        {% endif %}
+
+        <section class="card upload-card">
+            <h3>Upload X-ray Image</h3>
+
+            <form action="/analyze" method="POST" enctype="multipart/form-data">
+                <label class="file-label">
+                    Choose image
+                    <input type="file" name="xray_image" accept=".jpg,.jpeg,.png" required>
+                </label>
+
+                <label class="select-label">
+                    Number of similar images:
+                    <select name="top_k">
+                        <option value="3">Top 3</option>
+                        <option value="5" selected>Top 5</option>
+                        <option value="7">Top 7</option>
+                        <option value="10">Top 10</option>
+                    </select>
+                </label>
+
+                <button type="submit">Analyze Image</button>
+            </form>
+        </section>
+
+        <a class="back-link" href="/visualizations">View Embedding Visualizations</a>
+
+        <p><p></p></p><p></p>
+
+        <section class="grid-3">
+            <div class="info-card">
+                <h3>1. Image Embedding</h3>
+                <p>
+                    Each X-ray is transformed into a numerical vector using a CNN model.
+                    This vector is called an image embedding.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>2. Similarity Search</h3>
+                <p>
+                    The uploaded X-ray embedding is compared with stored dataset embeddings
+                    using cosine similarity.
+                </p>
+            </div>
+
+            <div class="info-card">
+                <h3>3. Class Estimation</h3>
+                <p>
+                    The app checks whether the closest images are mostly NORMAL or PNEUMONIA.
+                </p>
+            </div>
+        </section>
+
+    </div>
+</body>
+</html>

@@ -67,8 +67,6 @@ def extract_embedding(image_path, model, transform, device):
 # Search engine class
 class XRaySearchEngine:
     def __init__(self):
-        #Loads embeddings, labels, image paths and the CNN feature extractor
-
         if not os.path.exists(EMBEDDINGS_PATH):
             raise FileNotFoundError("embeddings.npy not found. Run extract_embeddings.py first.")
 
@@ -86,13 +84,11 @@ class XRaySearchEngine:
         self.model = load_feature_extractor(self.device)
         self.transform = get_image_transform()
 
-        print("Search engine loaded successfully.")
+        print("Search engine loaded.")
         print("Embeddings shape:", self.embeddings.shape)
-        print("Using device:", self.device)
+        print("Device:", self.device)
 
     def search_similar_images(self, query_image_path, top_k=5):
-        #Receives one image and returns the top_k most similar images from the dataset
-
         query_embedding = extract_embedding(
             query_image_path,
             self.model,
@@ -103,36 +99,25 @@ class XRaySearchEngine:
         query_embedding = query_embedding.reshape(1, -1)
 
         similarities = cosine_similarity(query_embedding, self.embeddings)[0]
-
         top_indices = similarities.argsort()[::-1][:top_k]
 
         results = []
 
         for index in top_indices:
-            result = {
-                "image_path": self.image_paths[index],
-                "label": self.labels[index],
+            results.append({
+                "image_path": str(self.image_paths[index]),
+                "label": str(self.labels[index]),
                 "similarity": float(similarities[index])
-            }
-
-            results.append(result)
+            })
 
         prediction = self.predict_from_neighbors(results)
+        explanation = self.create_explanation(results, prediction)
 
-        return results, prediction
+        return results, prediction, explanation, query_embedding.flatten()
 
     def predict_from_neighbors(self, results):
-        #Estimates the class based on the labels of the most similar images (similar to k-nearest neighbors)
-
-        normal_count = 0
-        pneumonia_count = 0
-
-        for result in results:
-            if result["label"] == "NORMAL":
-                normal_count += 1
-            elif result["label"] == "PNEUMONIA":
-                pneumonia_count += 1
-
+        normal_count = sum(1 for r in results if r["label"] == "NORMAL")
+        pneumonia_count = sum(1 for r in results if r["label"] == "PNEUMONIA")
         total = len(results)
 
         if pneumonia_count > normal_count:
@@ -145,11 +130,26 @@ class XRaySearchEngine:
             predicted_class = "UNCERTAIN"
             confidence = 0.5
 
-        prediction = {
+        return {
             "predicted_class": predicted_class,
             "normal_count": normal_count,
             "pneumonia_count": pneumonia_count,
             "confidence": confidence
         }
 
-        return prediction
+    def create_explanation(self, results, prediction):
+        normal_scores = [r["similarity"] for r in results if r["label"] == "NORMAL"]
+        pneumonia_scores = [r["similarity"] for r in results if r["label"] == "PNEUMONIA"]
+
+        avg_normal = sum(normal_scores) / len(normal_scores) if normal_scores else 0
+        avg_pneumonia = sum(pneumonia_scores) / len(pneumonia_scores) if pneumonia_scores else 0
+
+        return {
+            "avg_normal_similarity": avg_normal,
+            "avg_pneumonia_similarity": avg_pneumonia,
+            "text": (
+                f"The system found {prediction['normal_count']} NORMAL and "
+                f"{prediction['pneumonia_count']} PNEUMONIA images among the closest matches. "
+                f"The final estimation is based on majority voting over the nearest neighbors."
+            )
+        }
