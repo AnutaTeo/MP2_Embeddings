@@ -177,10 +177,14 @@ button:hover {
     opacity: 1;
 }
 
-.prediction-card h2 {
-    font-size: 36px;
+.prediction-title {
+    font-size: 32px;
     margin: 10px 0;
     color: white;
+    line-height: 1.2;
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: break-word;
 }
 
 .prediction-card p {
@@ -197,6 +201,10 @@ button:hover {
 
 .prediction-uncertain {
     background: linear-gradient(135deg, #6b7280, #9ca3af);
+}
+
+.prediction-not-xray {
+    background: linear-gradient(135deg, #4b5563, #111827);
 }
 
 .small-title {
