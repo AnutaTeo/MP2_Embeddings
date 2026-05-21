@@ -15,7 +15,7 @@ DATASET_NAME = "paultimothymooney/chest-xray-pneumonia"
 OUTPUT_DIR = "embeddings"
 CLASSES = ["NORMAL", "PNEUMONIA"]
 
-MAX_IMAGES_PER_CLASS = 200
+MAX_IMAGES_PER_CLASS = 1000
 
 
 # Dataset download

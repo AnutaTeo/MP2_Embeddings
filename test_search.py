@@ -39,11 +39,11 @@ def show_results(query_image_path, results, prediction):
 def main():
     search_engine = XRaySearchEngine()
 
-    query_image_path = r"C:\Users\User\Desktop\Prezentari\MP2_Embeddings\image1_n.jpg"
+    query_image_path = r"C:\Users\User\Desktop\Prezentari\MP2_Embeddings\image3_n.jpeg"
 
     results, prediction = search_engine.search_similar_images(
         query_image_path=query_image_path,
-        top_k=5
+        top_k=10
     )
 
     print("\nPrediction:")
