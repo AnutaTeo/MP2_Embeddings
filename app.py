@@ -11,7 +11,7 @@ from gradcam_utils import generate_gradcam
 # Keep this import if your visualizations route uses this function.
 # In your repo, the file is called visualize_embeddings.py.
 from visualize_embeddings import generate_all_visualizations
-
+from embeddings_plots import generate_embedding_analysis_plots
 
 app = Flask(__name__)
 
@@ -147,6 +147,13 @@ def analyze():
         similarity_threshold=0.60
     )
 
+    embedding_plots = generate_embedding_analysis_plots(
+        query_embedding=query_embedding,
+        dataset_embeddings=search_engine.embeddings,
+        dataset_labels=search_engine.labels,
+        similarity_threshold=0.60
+    )       
+
     # -------------------------
     # Grad-CAM
     # Only generate if image is similar enough to chest X-ray dataset.
@@ -256,7 +263,8 @@ def analyze():
         process_steps=process_steps,
         normal_percentage=normal_percentage,
         pneumonia_percentage=pneumonia_percentage,
-        total_neighbors=total_neighbors
+        total_neighbors=total_neighbors,
+        embedding_plots=embedding_plots
     )
 
 

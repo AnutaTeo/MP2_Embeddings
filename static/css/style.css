@@ -410,3 +410,43 @@ button:hover {
     border-radius: 16px;
     background: white;
 }
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.analysis-panel {
+    background: #f4f7fb;
+    border-radius: 18px;
+    padding: 18px;
+    border: 1px solid #e1e8f0;
+}
+
+.analysis-panel img {
+    width: 100%;
+    border-radius: 14px;
+    background: white;
+    border: 1px solid #d8e1ec;
+    padding: 8px;
+}
+
+.analysis-panel p {
+    color: #637083;
+    line-height: 1.5;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+    .analysis-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .full-width {
+        grid-column: auto;
+    }
+}

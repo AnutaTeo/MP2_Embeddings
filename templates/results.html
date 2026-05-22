@@ -296,6 +296,46 @@
 
         </section>
 
+
+
+        <section class="card">
+            <h2>Embedding Analysis Dashboard</h2>
+
+            <p>
+                These plots show how the uploaded image embedding behaves compared to the dataset.
+                They help explain what happens behind the similarity search process.
+            </p>
+
+            <div class="analysis-grid">
+                <div class="analysis-panel">
+                    <h3>Similarity Distribution</h3>
+                    <p>
+                        This graph shows the cosine similarity between the uploaded image and all dataset images.
+                        The threshold line helps decide if the input is similar enough to the chest X-ray dataset.
+                    </p>
+                    <img src="{{ url_for('static', filename=embedding_plots.similarity_distribution) }}" alt="Similarity distribution">
+                </div>
+
+                <div class="analysis-panel">
+                    <h3>Top Embedding Dimensions</h3>
+                    <p>
+                        This graph shows the strongest values from the uploaded image embedding.
+                        These values are the numerical features extracted by the CNN.
+                    </p>
+                    <img src="{{ url_for('static', filename=embedding_plots.top_embedding_dimensions) }}" alt="Top embedding dimensions">
+                </div>
+
+                <div class="analysis-panel full-width">
+                    <h3>Uploaded Image in PCA Space</h3>
+                    <p>
+                        This plot reduces the high-dimensional embeddings to 2D using PCA.
+                        The uploaded image is marked with an X, while dataset images are shown by class.
+                    </p>
+                    <img src="{{ url_for('static', filename=embedding_plots.query_pca_position) }}" alt="Query PCA position">
+                </div>
+            </div>
+        </section>
+
         <!-- ========================================= -->
         <!-- CLASS DISTRIBUTION -->
         <!-- ========================================= -->
